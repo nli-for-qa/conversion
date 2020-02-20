@@ -646,7 +646,7 @@ class Question:
 
     def is_do_neg(self):
         if self.aux is not None and self.aux['form'] in AUX_DO and \
-                (self.question[self.aux['id'] + 1]['form'] == 'not'
+                ((self.aux['id']+1 < len(self.question) and self.question[self.aux['id'] + 1]['form'] == 'not')
                  or (self.root['id'] > 0 and self.question[self.root['id'] - 1]['form'] == 'not')):
 
             return True
