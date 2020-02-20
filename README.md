@@ -5,6 +5,12 @@
 1. [Pattern package](https://pypi.org/project/Pattern/#files) for NLP and word form manipulation. It requires mysql. On Mac use `brew install mysql` followed by `brew install openssl` and `export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/opt/openssl/lib/`. 
 
 2. SpaCy, spacy_conll and spacy_stanfordnlp for POS tagging and Dependency Parsing. See [here](https://github.com/BramVanroy/spacy_conll#parsing-to-conll-with-spacy-or-spacy-stanfordnlp), for instuctions to install.
+Make sure that you install the `en` model of stanford_nlp. Following should suffice:
+```
+>>> import stanfordnlp
+>>> stanfordnlp.download('en') 
+```
+For details, see [here](https://stanfordnlp.github.io/stanfordnlp/models.html#downloading-and-using-models).
 
 
 A model for transforming questions + short answers into full answer sentences. 
