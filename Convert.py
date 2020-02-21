@@ -26,8 +26,9 @@ import json
 
 #stanfordnlp.download('en')
 # Config
-data_path = Path('../qa-labeling/RACE/test')
-output_path = Path('.data/RACE/converted_test.json')
+data_path = Path('../qa-labeling/RACE/train')
+output_path = Path('.data/RACE/converted_train.json')
+output_dir = Path('.data/RACE/train')
 
 
 # In[3]:
@@ -148,7 +149,7 @@ def convert2(qa_sample: Dict):
 #                converted.append(_)
 #                pbar.update()
 
-converted = Parallel(n_jobs=49, batch_size=100,verbose=1, pre_dispatch='2*n_jobs*self.batch_size')(delayed(convert2)(i) for i in tqdm.tqdm(processed_samples, total=num_processed_samples))
+converted = Parallel(n_jobs=49, batch_size=100,verbose=2, pre_dispatch='2*n_jobs*self.batch_size')(delayed(convert2)(i) for i in tqdm.tqdm(processed_samples, total=num_processed_samples))
 
 
 # In[ ]:
