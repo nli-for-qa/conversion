@@ -3,9 +3,10 @@
 import json
 import argparse
 from pathlib import Path
-from typing import Dict, List, Mapping, Generator
+from typing import Dict, List, Mapping, Generator, Optional
 from copy import deepcopy
 import itertools
+import re
 import logging
 logger = logging.getLogger(__name__)
 
@@ -62,3 +63,50 @@ def _read_data(p: Path) -> List[Mapping]:
         print("Read {} files from {}".format(i, folder.absolute()))
 
     return samples
+
+
+def read_nli_data(p: Path) -> List[Dict]:
+    """Read dataset which has been converted to nli form"""
+    with open(p) as f:
+        data = json.load(f)
+
+    return data
+
+
+def get_qa_filename_from_nli_sample(nli_sample: Dict) -> str:
+    filename, question_number, option = (nli_sample['id']).split('_')
+
+    return filename
+
+
+def get_matching_qa_sample(nli_sample: Dict,
+                           qa_data_dir: Path) -> Optional[Dict]:
+    filename, question_number, option = (nli_sample['id']).split('_')
+    qa_id = ('_').join([filename, question_number])
+
+    return get_qa_sample(qa_id, qa_data_dir)
+
+
+def get_qa_sample(qa_id: str, qa_data_dir: Path) -> Dict:
+    filename, question_number = (qa_id).split('_')
+    m = re.match(r"(high|middle)(\d+\.txt)", filename)
+
+    if not m:
+        raise ValueError("id {} is invalid".format(qa_id))
+    filepath = qa_data_dir / m.group(1) / m.group(2)
+
+    with open(filepath) as f:
+        qa_sample = json.load(f)
+        res = {
+            'id': qa_id,
+            'article': qa_sample['article'],
+            'question': qa_sample['questions'][int(question_number)],
+            'answer': qa_sample['answers'][int(question_number)],
+            'options': qa_sample['options'][int(question_number)]
+        }
+
+    return res
+
+
+def conversion_successful(nli_sample: Dict) -> bool:
+    return nli_sample['conversion_success']
