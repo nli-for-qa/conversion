@@ -21,6 +21,12 @@ PREPS = ['TO', 'IN', 'RP']
 AUX = AUX_BE + AUX_DO + AUX_HAVE
 TIME_WORDS = ['year', 'month', 'day', 'hour', 'decade', 'century', 'millenium']
 DETS = ['the', 'a', 'an']
+TRUE_KW = {'true', 'correct'}
+FALSE_KW = {'false', 'incorrect'}
+
+# do not include VBG
+# ref: https://gist.github.com/nlothian/9240750
+VERB_XPOS = {'VBZ', 'VB', 'VBD', 'VBN', 'VBP'}
 
 with open('preps.txt', 'r') as f:
     common_preps = f.read().splitlines()
@@ -83,6 +89,8 @@ class Question:
         # Get copula
         self.cop = self._get_node('cop')
 
+        # special case 1
+
         if self.cop is not None and self.cop['form'] == 'be':
             aux_nodes = self._get_children(self.root, ['aux'], 'anywhere')
 
@@ -90,6 +98,8 @@ class Question:
                 self.aux = aux_nodes[0]
                 self.root = self.cop
                 self.cop = None
+
+        # special case 2
 
         if self.cop is not None and self.aux is None and is_verb(self.root):
             self.aux = self.cop
@@ -111,6 +121,7 @@ class Question:
         self._new_aux_pos = None
 
         if self.isvalid:
+            self.possible_gerunds = self._get_possible_gerunds()
             self.wh_is_quantity = self._wh_is_quantity()
             self.wh_is_time = self._wh_is_time()
             self.wh_is_happened = self._wh_is_happened()
@@ -119,6 +130,7 @@ class Question:
             self.wh_is_compl = self._wh_is_compl()
             self.dobj_pos = self._get_dobj_pos()
             self.is_do_neg = self.is_do_neg()
+            self.wh_true_false = self._wh_true_false()
 
     def _preprocess(self, question: conllu.models.TokenList):
         """ make ids and heads zero indexed"""
@@ -167,6 +179,43 @@ class Question:
         else:
             return self._get_nth_child(children[n], loc, 0)
 
+    def _get_possible_gerunds(self):
+        verb_or_ger = [tok for tok in self.question if is_verb(tok)]
+        # find at least one true verb
+        found = False
+        possible_gerunds = []
+
+        for tok in verb_or_ger:
+            if tok['xpostag'] in VERB_XPOS:
+                found = True
+
+        if found:
+            for tok in verb_or_ger:
+                if tok['xpostag'] == 'VBG':
+                    possible_gerunds.append(tok['id'])
+
+        return set(possible_gerunds)
+
+    def _wh_true_false(self):
+        root = self.root
+        ret = []
+
+        if (root['form'].lower() in TRUE_KW) or (
+                root['form'].lower() in FALSE_KW
+        ) and (root['xpostag'] == 'JJ') and self.wh['form'].lower() == 'which':
+            neg = self._get_children(root, ['advmod', 'neg'], 'left')
+
+            neg = [tok for tok in neg if (tok['form'].lower() == 'not')]
+
+            if self.cop:
+                ret.append(self.cop)
+
+            if neg:
+                ret = ret + neg
+            ret.append(root)
+
+        return ret
+
     def _get_wh(self):
         whs = []
         question = self.question
@@ -213,8 +262,8 @@ class Question:
             root_idx = cop['id']
 
         for tok in question[wh_idx + 1:]:
-            if not is_verb(tok) and (wh_idx <= root_idx
-                                     or tok['id'] in wh_tok_heads):
+            if ((not is_verb(tok)) or tok['id'] in self.possible_gerunds) and (
+                    wh_idx <= root_idx or tok['id'] in wh_tok_heads):
                 wh_tok_ids.append(tok['id'])
                 wh_tok_heads.append(tok['head'])
             elif tok['form'] == 'of':
@@ -626,6 +675,17 @@ class Question:
         aux = self.aux
         startidx, endidx = self.wh_pos
 
+        if self.wh_true_false:
+            all_toks = [tok for tok in question]
+            # empty out
+
+            for tok in all_toks:
+                if tok not in self.wh_true_false:
+                    self.remove_tok(tok)
+            self.question = answer + self.wh_true_false
+
+            return
+
         if self.type == 'VERB':
             self.remove_tok(self.question[a_pos])
 
@@ -735,6 +795,7 @@ class AnswerSpan:
         return None
 
     def _preprocess(self, answer):
+
         for i in range(len(answer)):
             answer[i]['id'] = i
             answer[i]['head'] -= 1
