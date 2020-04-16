@@ -28,7 +28,7 @@ def init(device: int, model_type: str, model_path: Path, model_class: Any,
     else:
         model = model_class(
             model_path,
-            device=device,
+            device_number=device,
             preprocessor=Preprocessor(),
             postprocessor=Postprocessor(**postprocessor_args))
     SingleQuestionSample.to_nli_converter = model
