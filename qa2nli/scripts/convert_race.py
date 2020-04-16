@@ -9,21 +9,30 @@ from qa2nli.qa_readers.reader import SingleQuestionSample, Sample
 from qa2nli.qa_readers.writer import JSONWriter
 from tqdm import tqdm
 logger = logging.getLogger(__file__)
-LEVEL = logging.INFO
+LEVEL = logging.DEBUG
 
 logging.basicConfig(
-    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=LEVEL)
+    format="%(process)d - %(asctime)s - %(levelname)s - %(name)s - %(message)s",
+    level=LEVEL)
 
 
-def parse_args() -> argparse.Namespace:
+def get_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser('convert_race')
+    parser.add_argument(
+        '--model_type', default='bart', choices=['dummy', 'bart'])
     parser.add_argument(
         '--model_path',
         required=True,
         type=Path,
         help='Path to BART model checkpoint')
     parser.add_argument(
-        '--device', type=int, default=-1, help='-1 for cpu 0 for gpu')
+        '--device',
+        nargs='+',
+        type=int,
+        default=-1,
+        help='-1 for cpu 0 for gpu')
+    parser.add_argument(
+        '--input_reader', default='race_reader', choices=['race_reader'])
     parser.add_argument(
         '--input_data', type=Path, help='Path to input data directory')
     parser.add_argument('--set', default='dev', help='dev, train or test')
@@ -42,7 +51,13 @@ def parse_args() -> argparse.Namespace:
         '--postprocess_splitter',
         default='period',
         choices=['spacy', 'period'])
+    parser.add_argument('--debug', action='store_true')
 
+    return parser
+
+
+def parse_args() -> argparse.Namespace:
+    parser = get_parser()
     args = parser.parse_args()
 
     return args
@@ -62,7 +77,11 @@ def main(args: argparse.Namespace) -> None:
         # make sure the dir exists
         args.output.mkdir(parents=True, exist_ok=True)
     inp_dir = args.input_data / args.set
-    race_data = RaceReader().read(inp_dir)
+
+    if args.input_reader == 'race_reader':
+        race_data = RaceReader().read(inp_dir)
+    else:
+        raise ValueError
     converter = BartConverter(
         args.model_path,
         device_number=args.device,
