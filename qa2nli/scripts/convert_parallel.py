@@ -96,6 +96,10 @@ def main(args: argparse.Namespace) -> None:
         output_dir=output_cache_dir,
         target_type=args.target_type,
         overwrite=(not args.resume_from_cache))
+    total_q = None
+
+    if args.input_reader == 'race_reader':
+        total_q = len(inp_data)  # race reader outputs SingleQuestionSample
 
     # init process pool, giving one device assignment to each from the queue
     process_pool = multiprocessing.Pool(
@@ -116,8 +120,10 @@ def main(args: argparse.Namespace) -> None:
     jobs = process_pool.imap_unordered(
         infer, inp_data, chunksize=args.per_process_chunk_size)
 
-    for job in jobs:
+    for job in tqdm(jobs, total=total_q):
         pass  # jobs is an iter so need to iterate
+    process_pool.close()
+    process_pool.join()
 
     # recombine cache to
 
