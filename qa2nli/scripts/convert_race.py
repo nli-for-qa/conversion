@@ -68,7 +68,7 @@ def main(args: argparse.Namespace) -> None:
         device_number=args.device,
         preprocessor=Preprocessor(),
         postprocessor=Postprocessor(
-            cleaner=args.cleaner, sentence_splitter=args.splitter))
+            cleaner=args.postprocess_cleaner, sentence_splitter=args.postprocess_splitter))
     SingleQuestionSample.to_nli_converter = converter
 
     converted: List[Sample] = []
