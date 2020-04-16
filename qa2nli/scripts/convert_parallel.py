@@ -1,14 +1,15 @@
-from typing import List
+from typing import List, Dict
 import argparse
 import logging
 from pathlib import Path
-from qa2nli.scripts.common import (get_default_parser,
-                                   create_shared_devices_queue, run_inference,
-                                   consume_device_queue_and_init)
+from qa2nli.scripts.common import (
+    get_default_parser, create_shared_devices_queue, run_inference,
+    consume_device_queue_and_init, read_cache_dir)
 from qa2nli.converters.bart.predictor import BartConverter
 from qa2nli.converters.processors import Preprocessor, Postprocessor
 from qa2nli.qa_readers.race import RaceReader
 from qa2nli.qa_readers.reader import SingleQuestionSample, Sample
+import json
 from tqdm import tqdm
 import multiprocessing
 from functools import partial
@@ -67,7 +68,7 @@ def main(args: argparse.Namespace) -> None:
         # make sure the dir exists
         args.output.mkdir(parents=True, exist_ok=True)
 
-    output_cache_dir = args.output / 'cache'
+    output_cache_dir = args.output / f'cache_{args.set}'
     output_cache_dir.mkdir(exist_ok=True)
     logger.info(f"Setting output cache to {output_cache_dir}")
 
@@ -126,6 +127,10 @@ def main(args: argparse.Namespace) -> None:
     process_pool.join()
 
     # recombine cache to
+    all_converted: List[Dict] = read_cache_dir(output_cache_dir)
+    with open(outfile, 'w') as f:
+        json.dump(all_converted, f)
+    logging.info(f"Wrote final output to {outfile}")
 
 
 if __name__ == '__main__':

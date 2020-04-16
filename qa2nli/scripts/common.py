@@ -88,8 +88,16 @@ def run_inference(input_sample: Sample,
     return
 
 
-def generate_infer_entry(output_dir, target_type, overwrite):
-    return run_inference()
+def read_cache_dir(cache_dir: Path) -> List[Dict]:
+    logger.info(f"Reading cache from {cache_dir}")
+    samples = []
+
+    for potential_file in cache_dir.iterdir():
+        if potential_file.is_file():
+            with open(potential_file) as f:
+                samples.append(json.load(f))
+
+    return samples
 
 
 def get_default_parser() -> argparse.ArgumentParser:
