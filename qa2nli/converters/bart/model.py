@@ -41,13 +41,13 @@ class BartSystem(BaseTransformer):
         y_ids = y[:, :-1].contiguous()
         lm_labels = y[:, 1:].clone()
         # Uncomment following line to ignore pad tokens in target while calculating loss
-        #lm_labels[y[:, 1:] == self.tokenizer.pad_token_id] = -100
-        target_mask = batch["target_mask"][:, :-1].contiguous(
-        )  # drop one in mask as well
+        lm_labels[y[:, 1:] == self.tokenizer.pad_token_id] = -100
+        # target_mask = batch["target_mask"][:, :-1].contiguous(
+        # )  # drop one in mask as well
         outputs = self(
             input_ids=batch["source_ids"],
             attention_mask=batch["source_mask"],
-            decoder_attention_mask=target_mask,
+            #     decoder_attention_mask=target_mask,
             decoder_input_ids=y_ids,
             lm_labels=lm_labels,
         )
@@ -184,33 +184,3 @@ class BartSystem(BaseTransformer):
         )
 
         return parser
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    add_generic_args(parser, os.getcwd())
-    parser = BartSystem.add_model_specific_args(parser, os.getcwd())
-    args = parser.parse_args()
-
-    # If output_dir not provided, a folder will be generated in pwd
-
-    if args.output_dir is None:
-        args.output_dir = os.path.join(
-            "./results",
-            f"{args.task}_{args.model_type}_{time.strftime('%Y%m%d_%H%M%S')}",
-        )
-        os.makedirs(args.output_dir)
-
-    model = BartSystem(args)
-    trainer = generic_train(model, args)
-
-    # Optionally, predict on dev set and write to output_dir
-
-    if args.do_predict:
-        checkpoints = list(
-            sorted(
-                glob.glob(
-                    os.path.join(args.output_dir, "epoch=*.ckpt"),
-                    recursive=True)))
-        BartSystem.load_from_checkpoint(checkpoints[-1])
-        trainer.test(model)
