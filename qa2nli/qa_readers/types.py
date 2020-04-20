@@ -1,7 +1,7 @@
 from typing import Union, List, Tuple, Dict, Optional, ClassVar
 from pathlib import Path
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ class SingleQuestionSample(Sample):
     question: str
     options: List[str]
     answer: int
+    meta: Dict = field(default_factory=dict)
     can_convert_to: ClassVar = {
         'SingleQuestionSample', 'QuestionOptionSample', 'NLIWithOptionsSample',
         'PureNLISample'
@@ -55,14 +56,17 @@ class SingleQuestionSample(Sample):
         elif target == 'NLIWithOptionsSample':
             hypothesis_options = self.__class__.to_nli_converter(
                 [self.question] * len(self.options), self.options)
+            output_sample = NLIWithOptionsSample(
+                id=self.id,
+                premise=self.article,
+                hypothesis_options=[],
+                label=self.answer)
 
-            return [
-                NLIWithOptionsSample(
-                    id=self.id,
-                    premise=self.article,
-                    hypothesis_options=hypothesis_options,
-                    label=self.answer)
-            ]
+            for h, meta in hypothesis_options:
+                output_sample.hypothesis_options.append(h)
+                output_sample.meta.append(meta)  # type: ignore
+
+            return [output_sample]
         elif target == 'PureNLISample':
 
             hypothesis_options = self.__class__.to_nli_converter(
@@ -72,10 +76,9 @@ class SingleQuestionSample(Sample):
                 PureNLISample(
                     id=self.id + f"_{i}",
                     premise=self.article,
-                    hypothesis=h,
-                    label=int(i == self.answer))
-
-                for i, h in enumerate(hypothesis_options)
+                    hypothesis=h[0],
+                    label=int(i == self.answer),
+                    meta=h[1]) for i, h in enumerate(hypothesis_options)
             ]
         else:
             raise ValueError(
@@ -91,6 +94,38 @@ class SingleQuestionSingleOptionSample(Sample):
     question: str
     option: str
     label: int
+    meta: Dict = field(default_factory=dict)
+    can_convert_to: ClassVar = {
+        'QuestionOptionSample', 'PureNLISample',
+        'SingleQuestionSingleOptionSample'
+    }
+
+    def to(self, target: str) -> List[Sample]:
+        self.check_convertible(target)
+
+        if target == 'SingleQuestionSingleOptionSample':
+            return [self]
+        elif target == 'QuestionOptionSample':
+            return [
+                QuestionOptionSample(
+                    id=self.id, question=self.question, option=self.option)
+            ]
+        elif target == 'PureNLISample':
+            hypothesis = self.__class__.to_nli_converter([self.question],
+                                                         [self.option])
+            output_sample = PureNLISample(
+                id=self.id,
+                premise=self.article,
+                hypothesis=hypothesis[0][0],
+                label=self.label,
+                meta=hypothesis[0][1])
+
+            return [output_sample]
+        else:
+            raise ValueError(
+                f"Cannot convert from {self} to {target}. Not supported")
+
+        return []
 
 
 @dataclass
@@ -98,6 +133,7 @@ class QuestionOptionSample(Sample):
     id: str
     question: str
     option: str
+    meta: Dict = field(default_factory=list)
 
 
 @dataclass
@@ -106,6 +142,7 @@ class NLIWithOptionsSample(Sample):
     premise: str
     hypothesis_options: List[str]
     label: int
+    meta: Dict = field(default_factory=list)
 
 
 @dataclass
@@ -114,3 +151,4 @@ class PureNLISample(Sample):
     premise: str
     hypothesis: str
     label: int
+    meta: Dict = field(default_factory=dict)

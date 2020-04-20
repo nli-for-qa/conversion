@@ -211,6 +211,34 @@ class RaceReader(DatasetReader):
                     all_res.append(result)
 
                 return [single for group in all_res for single in group]
+
+        elif (self.output_type == 'SingleQuestionSingleOptionSample'
+              and self.input_type == 'OriginalRaceSample'):
+
+            def sample_converter(x: Sample) -> Sample:
+                return x
+
+            def aggregate_converter(x: List[Sample]) -> List[Sample]:
+                all_res = []
+
+                for s in x:
+                    article = s.article
+
+                    for i, (q, opts, a) in enumerate(
+                            zip(s.questions, s.options, s.answers)):
+                        q_id = '_'.join([s.id, str(i)])
+
+                        for opt_num, opt in enumerate(opts):
+                            all_res.append(
+                                SingleQuestionSingleOptionSample(
+                                    id='_'.join([q_id, str(opt_num)]),
+                                    article=article,
+                                    question=q,
+                                    option=opt,
+                                    label=int(ANS_LETTER_TO_NUM[a] == opt_num),
+                                ))
+
+                return all_res
         else:
             raise ValueError(
                 f"input_type {self.input_type} and output_type {self.output_type} are not supported together"

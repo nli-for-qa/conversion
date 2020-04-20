@@ -5,8 +5,9 @@ from qa2nli.converters.processors import Preprocessor, Postprocessor
 import multiprocessing
 import itertools
 import argparse
-from qa2nli.qa_readers.reader import SingleQuestionSample, Sample
+from qa2nli.qa_readers.reader import SingleQuestionSample, SingleQuestionSingleOptionSample, Sample
 import json
+import re
 import logging
 logger = logging.getLogger(__name__)
 
@@ -18,20 +19,13 @@ def init(device: int, model_type: str, model_path: Path, model_class: Any,
     """ Initialize the model"""
     global model
 
-    if model_type == 'dummy':
-
-        def converter(qs: List[str], os: List[str]) -> List[str]:
-
-            return [q + ' ' + o for q, o in zip(qs, os)]
-
-        model = converter
-    else:
-        model = model_class(
-            model_path,
-            device_number=device,
-            preprocessor=Preprocessor(),
-            postprocessor=Postprocessor(**postprocessor_args))
+    model = model_class(
+        model_path,
+        device_number=device,
+        preprocessor=Preprocessor(),
+        postprocessor=Postprocessor(**postprocessor_args))
     SingleQuestionSample.to_nli_converter = model
+    SingleQuestionSingleOptionSample.to_nli_converter = model
     logger.info(
         f"Initialized device {device} on pid {multiprocessing.current_process().pid}"
     )
@@ -61,6 +55,13 @@ def create_shared_devices_queue(devices: List[int],
     return q
 
 
+_backslash_pattern = re.compile(r"\/")
+
+
+def valid_filename(idx: str) -> str:
+    return _backslash_pattern.sub("_", idx)
+
+
 def run_inference(input_sample: Sample,
                   output_dir: Path = None,
                   target_type: str = 'NLIWithOptionsSample',
@@ -69,7 +70,7 @@ def run_inference(input_sample: Sample,
     Make sure the output_dir exists"""
     idx = input_sample.id
     # check if exists
-    file_ = output_dir / idx
+    file_ = output_dir / valid_filename(idx)
 
     if ((file_).is_file()) and (not overwrite):
         logger.debug(f"Skipping {idx} as {file_} exists")
@@ -103,7 +104,9 @@ def read_cache_dir(cache_dir: Path) -> List[Dict]:
 def get_default_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser('convert')
     parser.add_argument(
-        '--model_type', default='dummy', choices=['dummy', 'bart'])
+        '--model_type',
+        default='dummy',
+        choices=['dummy', 'bart', 'just_question', 'const'])
     parser.add_argument(
         '--model_path',
         required=True,
@@ -117,7 +120,9 @@ def get_default_parser() -> argparse.ArgumentParser:
         help='-1 for cpu 0 for gpu')
 
     parser.add_argument(
-        '--input_reader', default='race_reader', choices=['race_reader'])
+        '--input_reader',
+        default='race_reader',
+        choices=['race_reader', 'multirc_reader'])
     parser.add_argument(
         '--input_data', type=Path, help='Path to input data directory')
     parser.add_argument('--set', default='dev', help='dev, train or test')

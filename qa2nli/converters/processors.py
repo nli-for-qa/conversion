@@ -1,7 +1,9 @@
-from typing import Callable, List, Union, Optional
+from typing import Callable, List, Union, Optional, Dict, Tuple
 import re
 import spacy
 import logging
+import math
+from enum import Enum
 logger = logging.getLogger(__name__)
 
 
@@ -23,7 +25,7 @@ def get_spacy_model(model: str) -> spacy.language.Model:
 class Preprocessor:
     """Override the __call__ method in inherited class to change functionallity"""
 
-    def __call__(self, q: str, o: str) -> str:
+    def __call__(self, q: str, o: str) -> Tuple[str, Dict]:
         """ Very basic preprocessor which concats question and option.
 
             Handles fill in the black type questions.
@@ -33,8 +35,9 @@ class Preprocessor:
             h = q.replace('_', o)
         else:
             h = q + ' ' + o
+        meta = {'question': q, 'option': o}
 
-        return h
+        return h, meta
 
 
 dots = re.compile(r"[\.\'\"\?, ]{2,}[\w ]*")
@@ -44,9 +47,21 @@ def remove_dots(inp: str) -> str:
     return dots.sub('.', inp)
 
 
+class LengthIssue(Enum):
+    NONE = 'none'
+    TOO_SHORT = 'too_short'
+    TOO_LONG = 'too_long'
+    COULD_NOT_FIX = 'could_not_fix'
+
+    def __str__(self):
+        return self.value
+
+
 class Postprocessor:
-    def __init__(self, sentence_splitter: str = 'period',
-                 cleaner: str = None) -> None:
+    def __init__(self,
+                 sentence_splitter: str = 'period',
+                 cleaner: str = None,
+                 length_ratio: float = None) -> None:
         self.sentence_splitter = sentence_splitter
 
         if cleaner == 'remove_dots':
@@ -59,12 +74,67 @@ class Postprocessor:
         else:
             self.spacy_nlp = None
 
-    def __call__(self, inp: str) -> str:
+        if length_ratio is None:
+            self.length_ratio = 1.3
+
+    def _length_check(self, output: str, question: str,
+                      option: str) -> LengthIssue:
+        total_ratio = (len(output) / (len(question) + len(option)))
+
+        if total_ratio > self.length_ratio:
+            # too long. Cut the output
+
+            return LengthIssue.TOO_LONG
+        elif len(output) < len(option):
+            return LengthIssue.TOO_SHORT
+
+        return LengthIssue.NONE
+
+    def __call__(self, inp: str, meta: Dict) -> Tuple[str, Dict]:
         cleaned = self.cleaner(inp)
 
         if self.sentence_splitter == 'spacy':
-            first_sent = (list(self.spacy_nlp(cleaned).sents)[0]).text.strip()
-        elif self.sentence_splitter == 'period':
-            first_sent = cleaned.split('.')[0]
+            sentences = [
+                s.text.strip() for s in list(self.spacy_nlp(cleaned).sents)
+            ]
+            first_sent = (sentences[0]).strip()
 
-        return first_sent
+        elif self.sentence_splitter == 'period':
+            sentences = cleaned.split('.')
+            first_sent = sentences[0]
+
+        length_issue = self._length_check(first_sent, meta['question'],
+                                          meta['option'])
+        issues_encountered = []
+
+        if length_issue == LengthIssue.TOO_LONG:
+            issues_encountered.append(length_issue)
+            output = first_sent[:int(
+                math.ceil(self.length_ratio *
+                          (len(meta['question']) + len(meta['option']))))]
+        elif length_issue == LengthIssue.TOO_SHORT:
+            issues_encountered.append(length_issue)
+            output = first_sent
+            next_ = 1
+            # add sentences till legth is not too short
+            max_tries = 5
+            try:
+                while length_issue == LengthIssue.TOO_SHORT:
+                    output = output + f" {sentences[next_]}"
+                    length_issue = self._length_check(output, meta['question'],
+                                                      meta['option'])
+                    next_ += 1
+
+                    if next_ > max_tries:
+                        issues_encountered.append(LengthIssue.COULD_NOT_FIX)
+
+                    break
+            except IndexError:
+                issues_encountered.append(LengthIssue.COULD_NOT_FIX)
+        else:
+            output = first_sent
+        meta['conversion_issues'] = [
+            str(issue) for issue in issues_encountered
+        ]
+
+        return output, meta

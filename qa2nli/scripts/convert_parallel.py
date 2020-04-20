@@ -5,9 +5,11 @@ from pathlib import Path
 from qa2nli.scripts.common import (
     get_default_parser, create_shared_devices_queue, run_inference,
     consume_device_queue_and_init, read_cache_dir)
-from qa2nli.converters.bart.predictor import BartConverter
+from qa2nli.converters.bart.predictor import BartConverter, BartLikeConst
+from qa2nli.converters.base import Converter, JustQuestionConverter
 from qa2nli.converters.processors import Preprocessor, Postprocessor
 from qa2nli.qa_readers.race import RaceReader
+from qa2nli.qa_readers.multirc import MultircReader
 from qa2nli.qa_readers.reader import SingleQuestionSample, Sample
 import json
 from tqdm import tqdm
@@ -77,14 +79,20 @@ def main(args: argparse.Namespace) -> None:
 
     if args.input_reader == 'race_reader':
         inp_data = RaceReader().read(inp_dir)
+    elif args.input_reader == 'multirc_reader':
+        inp_data = MultircReader().read(inp_dir.with_suffix('.json'))
     else:
         raise ValueError
     # check model class
 
     if args.model_type == 'bart':
         model_class = BartConverter
+    elif args.model_type == 'just_question':
+        model_class = JustQuestionConverter
+    elif args.model_type == 'const':
+        model_class = BartLikeConst
     else:
-        model_class = None
+        model_class = Converter
     logger.info(f"Model class used is {model_class}")
     # setup device queue
     devices_assignment_queue = create_shared_devices_queue(
@@ -101,6 +109,9 @@ def main(args: argparse.Namespace) -> None:
 
     if args.input_reader == 'race_reader':
         total_q = len(inp_data)  # race reader outputs SingleQuestionSample
+    elif args.input_reader == 'multirc_reader':
+        total_q = len(
+            inp_data)  # we won't batch for SingleQuestionSingleSample also
 
     # init process pool, giving one device assignment to each from the queue
     process_pool = multiprocessing.Pool(

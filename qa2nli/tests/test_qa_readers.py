@@ -33,33 +33,33 @@ def test_race_reader(race_dev_data, race_data_path):
         assert target_sample == sample
 
 
-def test_conversion_manager(dummy_converter, race_data_path):
-    race_data = RaceReader(
-        input_type='OriginalRaceSample',
-        output_type='SingleQuestionSample').read(race_data_path)
-    manager = ConversionManager(race_data, batch_size=2)
-
-    for batch in manager:
-        converted = dummy_converter(*batch)
-        manager.tell(converted)
-    converted = [c for c in manager.converted()]
-    assert len(converted) == len(race_data)
-
-    for cov, ori in zip(converted, race_data):
-        assert cov.id == ori.id
-        assert cov.hypothesis_options == [(ori.question + ' ' + s)
-                                          for s in ori.options]
-
-
-def test_conversion_manager_tqdm(dummy_converter, race_data_path):
-    race_data = RaceReader(
-        input_type='OriginalRaceSample',
-        output_type='SingleQuestionSample').read(race_data_path)
-    manager = ConversionManager(race_data, batch_size=2)
-
-    for batch in tqdm.tqdm(manager):
-        converted = dummy_converter(*batch)
-        manager.tell(converted)
+# def test_conversion_manager(dummy_converter, race_data_path):
+#    race_data = RaceReader(
+#        input_type='OriginalRaceSample',
+#        output_type='SingleQuestionSample').read(race_data_path)
+#    manager = ConversionManager(race_data, batch_size=2)
+#
+#    for batch in manager:
+#        converted = dummy_converter(*batch)
+#        manager.tell(converted)
+#    converted = [c for c in manager.converted()]
+#    assert len(converted) == len(race_data)
+#
+#    for cov, ori in zip(converted, race_data):
+#        assert cov.id == ori.id
+#        assert cov.hypothesis_options == [(ori.question + ' ' + s)
+#                                          for s in ori.options]
+#
+#
+# def test_conversion_manager_tqdm(dummy_converter, race_data_path):
+#    race_data = RaceReader(
+#        input_type='OriginalRaceSample',
+#        output_type='SingleQuestionSample').read(race_data_path)
+#    manager = ConversionManager(race_data, batch_size=2)
+#
+#    for batch in tqdm.tqdm(manager):
+#        converted = dummy_converter(*batch)
+#        manager.tell(converted)
 
 
 def test_SingleQuestionSample_to_NLIWithOptions(dummy_converter,

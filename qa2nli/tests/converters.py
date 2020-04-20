@@ -1,3 +1,4 @@
+from typing import List, Tuple
 import pytest
 from qa2nli.converters.bart.predictor import BartConverter
 from qa2nli.converters.processors import Preprocessor, Postprocessor
@@ -9,8 +10,8 @@ bart_model_path = Path(__file__).parent.parent.parent / \
 
 @pytest.fixture
 def dummy_converter():
-    def converter(qs, os):
-        return [q + ' ' + o for q, o in zip(qs, os)]
+    def converter(qs: List[str], os: List[str]) -> List[Tuple]:
+        return [(q + ' ' + o, dict()) for q, o in zip(qs, os)]
 
     return converter
 
@@ -26,4 +27,4 @@ def bart_with_spacy_converter():
         bart_model_path,
         device_number=-1,
         preprocessor=Preprocessor(),
-        postprocessor=Postprocessor(use_spacy=True))
+        postprocessor=Postprocessor())
