@@ -146,7 +146,8 @@ def main(args: argparse.Namespace) -> None:
     all_converted: List[Dict] = read_cache_dir(output_cache_dir)
     with open(outfile, 'w') as f:
         json.dump(all_converted, f)
-    logging.info(f"Wrote final output to {outfile}")
+    logging.info(
+        f"Wrote final output to of {len(all_converted)} samples {outfile}")
 
 
 if __name__ == '__main__':

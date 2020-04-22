@@ -63,11 +63,12 @@ class BoolQReader(DatasetReader):
             raise ValueError(f"outpu_type {self.output_type} not supported")
 
         def reader_func(p: Path) -> List[OriginalBoolQSample]:
+            id_prefix = p.name
 
             return [
-                OriginalBoolQSample(id=s['title'], **s)
+                OriginalBoolQSample(id=id_prefix + f'_{i}', **s)
 
-                for s in self._read_data(p)
+                for i, s in enumerate(self._read_data(p))
             ]
 
         def sample_converter(x: OriginalBoolQSample) -> PureNLISample:
@@ -81,6 +82,7 @@ class BoolQReader(DatasetReader):
 
         def aggregate_converter(x: List[SingleQuestionSingleOptionSample]
                                 ) -> List[SingleQuestionSingleOptionSample]:
+            # boolq ids are not unique
 
             return x
 
