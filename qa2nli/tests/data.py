@@ -9,6 +9,7 @@ import json
 import itertools
 import tqdm
 import logging
+import jsonlines
 logger = logging.getLogger(__file__)
 
 
@@ -97,3 +98,17 @@ def race_data_path():
 @pytest.fixture
 def multirc_data_path():
     return Path(__file__).absolute().parent / '.data/multirc/dev.json'
+
+
+@pytest.fixture
+def boolq_data_path():
+    return Path(__file__).absolute().parent / '.data/boolq/dev.jsonl'
+
+
+@pytest.fixture
+def boolq_data():
+    with jsonlines.open(
+            Path(__file__).absolute().parent / '.data/boolq/dev.jsonl') as f:
+        data = list(f)
+
+    return data

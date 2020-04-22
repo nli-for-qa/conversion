@@ -1,9 +1,25 @@
 from typing import Callable, List, Union, TypeVar, Tuple, Dict, Any
+from .processors import PreprocessorBase, PostprocessorBase
 
 
 class Converter:
-    def __init__(self, *args: None, **kwargs: None) -> None:
-        pass
+    def __init__(self,
+                 *args,
+                 preprocessor: Callable[[str, str], Tuple[str, Dict]] = None,
+                 postprocessor: Callable[[str, Dict], Tuple[str, Dict]] = None,
+                 **kwargs: None) -> None:
+
+        if preprocessor is None:
+            self.preprocessor: Callable[[str, str],
+                                        Tuple[str, Dict]] = PreprocessorBase()
+        else:
+            self.preprocessor = preprocessor
+
+        if postprocessor is None:
+            self.postprocessor: Callable[
+                [str, Dict], Tuple[str, Dict]] = PostprocessorBase()
+        else:
+            self.postprocessor = postprocessor
 
     def __call__(self, question: Union[str, List[str]],
                  option: Union[str, List[str]]) -> List[Tuple[str, Dict]]:
@@ -13,10 +29,24 @@ class Converter:
             # batched. Do nothing
             pass
         else:
-            question = [question]
-            option = [option]
+            question = [question]  # type:ignore
+            option = [option]  # type:ignore
+        assert len(question) == len(option)
+        preprocessed: List[Tuple[str, Dict]] = [
+            self.preprocessor(q, o) for q, o in zip(question, option)
+        ]
+        preds: List[Tuple[str, Dict]] = self.apply_model(preprocessed)
+        postprocessed: List[Tuple[str, Dict]] = [
+            self.postprocessor(pred, meta) for pred, meta in preds
+        ]
 
-        return [(q + ' ' + o, dict()) for q, o in zip(question, option)]
+        return postprocessed
+
+    def apply_model(self, preprocessed: List[Tuple[str, Dict]], *args: Any,
+                    **kwargs: Any) -> List[Tuple[str, Dict]]:
+        # check batching
+
+        return preprocessed
 
 
 class JustQuestionConverter(Converter):

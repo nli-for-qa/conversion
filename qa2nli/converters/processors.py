@@ -7,6 +7,10 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 
+def remove_excess_space(inp: str) -> str:
+    return ' '.join(inp.split()).strip()
+
+
 def get_spacy_model(model: str) -> spacy.language.Model:
     try:
         spacy_model = spacy.load(model)
@@ -22,7 +26,7 @@ def get_spacy_model(model: str) -> spacy.language.Model:
     return spacy_model
 
 
-class Preprocessor:
+class PreprocessorBase:
     """Override the __call__ method in inherited class to change functionallity"""
 
     def __call__(self, q: str, o: str) -> Tuple[str, Dict]:
@@ -35,10 +39,13 @@ class Preprocessor:
             h = q.replace('_', o)
         else:
             h = q + ' ' + o
+        h = remove_excess_space(h)
         meta = {'question': q, 'option': o}
 
         return h, meta
 
+
+Preprocessor = PreprocessorBase
 
 dots = re.compile(r"[\.\'\"\?, ]{2,}[\w ]*")
 
@@ -57,11 +64,19 @@ class LengthIssue(Enum):
         return self.value
 
 
-class Postprocessor:
+class PostprocessorBase:
+    def __call__(self, inp: str, meta: Dict) -> Tuple[str, Dict]:
+        meta.update({'conversion_issues': []})
+
+        return inp, meta
+
+
+class Postprocessor(PostprocessorBase):
     def __init__(self,
                  sentence_splitter: str = 'period',
                  cleaner: str = None,
-                 length_ratio: float = None) -> None:
+                 lower_length_ratio: float = None,
+                 upper_length_ratio: float = None) -> None:
         self.sentence_splitter = sentence_splitter
 
         if cleaner == 'remove_dots':
@@ -73,22 +88,48 @@ class Postprocessor:
             self.spacy_nlp = get_spacy_model('en_core_web_sm')
         else:
             self.spacy_nlp = None
+        self.lower_length_ratio = lower_length_ratio
 
-        if length_ratio is None:
-            self.length_ratio = 1.3
+        if upper_length_ratio is None:
+            self.upper_length_ratio = 1.3
 
     def _length_check(self, output: str, question: str,
                       option: str) -> LengthIssue:
         total_ratio = (len(output) / (len(question) + len(option)))
 
-        if total_ratio > self.length_ratio:
+        if total_ratio > self.upper_length_ratio:
             # too long. Cut the output
 
             return LengthIssue.TOO_LONG
-        elif len(output) < len(option):
+        elif self.lower_length_ratio is None and len(output) < len(option):
             return LengthIssue.TOO_SHORT
+        elif self.lower_length_ratio is not None:
+            if total_ratio < self.lower_length_ratio:
+                return LengthIssue.TOO_SHORT
 
         return LengthIssue.NONE
+
+    def _fix_too_short(self, all_sentences: List[str],
+                       meta: Dict) -> Tuple[str, bool]:
+        next_ = 1
+        could_not_fix = False
+        current_output = all_sentences[0]
+        # add sentences till legth is not too short
+        max_tries = min(5, len(all_sentences))
+        length_issue = LengthIssue.TOO_SHORT
+
+        while length_issue == LengthIssue.TOO_SHORT:
+            current_output = current_output + f" {all_sentences[next_]}"
+            length_issue = self._length_check(current_output, meta['question'],
+                                              meta['option'])
+            next_ += 1
+
+            if next_ > max_tries:
+                could_not_fix = True
+
+                break
+
+        return current_output, could_not_fix
 
     def __call__(self, inp: str, meta: Dict) -> Tuple[str, Dict]:
         cleaned = self.cleaner(inp)
@@ -102,39 +143,32 @@ class Postprocessor:
         elif self.sentence_splitter == 'period':
             sentences = cleaned.split('.')
             first_sent = sentences[0]
+        meta['all_sentences'] = sentences
 
-        length_issue = self._length_check(first_sent, meta['question'],
-                                          meta['option'])
+        output = first_sent
         issues_encountered = []
+        length_issue = self._length_check(output, meta['question'],
+                                          meta['option'])
+
+        if length_issue == LengthIssue.TOO_SHORT:
+            issues_encountered.append(length_issue)
+            output, could_not_fix = self._fix_too_short(sentences, meta)
+
+            if could_not_fix:
+                issues_encountered.append(LengthIssue.COULD_NOT_FIX)
+        # check again
+        length_issue = self._length_check(output, meta['question'],
+                                          meta['option'])
 
         if length_issue == LengthIssue.TOO_LONG:
             issues_encountered.append(length_issue)
-            output = first_sent[:int(
-                math.ceil(self.length_ratio *
+            output = output[:int(
+                math.ceil(self.upper_length_ratio *
                           (len(meta['question']) + len(meta['option']))))]
-        elif length_issue == LengthIssue.TOO_SHORT:
-            issues_encountered.append(length_issue)
-            output = first_sent
-            next_ = 1
-            # add sentences till legth is not too short
-            max_tries = 5
-            try:
-                while length_issue == LengthIssue.TOO_SHORT:
-                    output = output + f" {sentences[next_]}"
-                    length_issue = self._length_check(output, meta['question'],
-                                                      meta['option'])
-                    next_ += 1
 
-                    if next_ > max_tries:
-                        issues_encountered.append(LengthIssue.COULD_NOT_FIX)
-
-                    break
-            except IndexError:
-                issues_encountered.append(LengthIssue.COULD_NOT_FIX)
-        else:
-            output = first_sent
         meta['conversion_issues'] = [
             str(issue) for issue in issues_encountered
         ]
+        output = remove_excess_space(output)
 
         return output, meta

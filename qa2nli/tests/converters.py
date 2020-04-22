@@ -5,7 +5,7 @@ from qa2nli.converters.processors import Preprocessor, Postprocessor
 from pathlib import Path
 
 bart_model_path = Path(__file__).parent.parent.parent / \
-    '.models/bart_test/epoch=1.ckpt'
+    '.models/bart_gsc4_1/epoch=1.ckpt'
 
 
 @pytest.fixture

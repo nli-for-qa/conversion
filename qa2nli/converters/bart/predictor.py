@@ -32,6 +32,8 @@ class BartConverter(Converter):
             device_number: int = 0,
             preprocessor: Callable[[str, str], Tuple[str, Dict]] = None,
             postprocessor: Callable[[str, Dict], Tuple[str, Dict]] = None):
+        super().__init__(
+            preprocessor=preprocessor, postprocessor=postprocessor)
 
         if device_number > -1:
             self.device = f'cuda:{device_number}'
@@ -42,18 +44,6 @@ class BartConverter(Converter):
             model_path, map_location=self.device)
         self.model.model.to(self.device)
         self.tokenizer = BartTokenizer.from_pretrained('bart-large-cnn')
-
-        if preprocessor is None:
-            self.preprocessor: Callable[
-                [str, str], Tuple[str, Dict]] = lambda q, o: (q + ' ' + o, {})
-        else:
-            self.preprocessor = preprocessor
-
-        if postprocessor is None:
-            self.postprocessor: Callable[[str, Dict], Tuple[str, Dict]] = \
-                lambda h, d: (h, d)
-        else:
-            self.postprocessor = postprocessor
 
     def apply_model(
             self,
@@ -92,27 +82,6 @@ class BartConverter(Converter):
 
         return output
 
-    def __call__(self, question: Union[str, List[str]],
-                 option: Union[str, List[str]]) -> List[Tuple[str, Dict]]:
-        # check batching
-
-        if type(question) == list and type(option) == list:
-            # batched. Do nothing
-            pass
-        else:
-            question = [question]
-            option = [option]
-        assert len(question) == len(option)
-        preprocessed: List[Tuple[str, Dict]] = [
-            self.preprocessor(q, o) for q, o in zip(question, option)
-        ]
-        preds: List[Tuple[str, Dict]] = self.apply_model(preprocessed)
-        postprocessed: List[Tuple[str, Dict]] = [
-            self.postprocessor(pred, meta) for pred, meta in preds
-        ]
-
-        return postprocessed
-
 
 class BartLikeConst(BartConverter):
     def __init__(
@@ -145,4 +114,5 @@ class BartLikeConst(BartConverter):
     def apply_model(self, preprocessed: List[Tuple[str, Dict]], *args,
                     **kwargs):
 
-        return [('abc. abc. abc. abc.', meta) for (_, meta) in preprocessed]
+        return [('. '.join(['I love cats'] * 30), meta)
+                for (_, meta) in preprocessed]

@@ -5,7 +5,7 @@ from pathlib import Path
 from qa2nli.scripts.common import (
     get_default_parser, create_shared_devices_queue, run_inference,
     consume_device_queue_and_init, read_cache_dir)
-from qa2nli.converters.bart.predictor import BartConverter, BartLikeConst
+from qa2nli.converters.bart.predictor import BartConverter, BartLikeConst, Converter
 from qa2nli.converters.base import Converter, JustQuestionConverter
 from qa2nli.converters.processors import Preprocessor, Postprocessor
 from qa2nli.qa_readers.race import RaceReader
@@ -91,6 +91,8 @@ def main(args: argparse.Namespace) -> None:
         model_class = JustQuestionConverter
     elif args.model_type == 'const':
         model_class = BartLikeConst
+    elif args.model_type == 'concat':
+        model_class = Converter
     else:
         model_class = Converter
     logger.info(f"Model class used is {model_class}")

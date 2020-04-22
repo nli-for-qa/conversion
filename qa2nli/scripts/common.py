@@ -1,7 +1,8 @@
 from multiprocessing import Pool, current_process, Queue
 from pathlib import Path
 from typing import Any, List, Dict
-from qa2nli.converters.processors import Preprocessor, Postprocessor
+from qa2nli.converters.processors import Preprocessor, Postprocessor, PostprocessorBase
+from qa2nli.converters.base import Converter
 import multiprocessing
 import itertools
 import argparse
@@ -18,12 +19,17 @@ def init(device: int, model_type: str, model_path: Path, model_class: Any,
          preprocessor_args: Dict, postprocessor_args: Dict) -> None:
     """ Initialize the model"""
     global model
+    # This is a hack
 
+    if model_class == Converter:
+        postprocessor = PostprocessorBase()
+    else:
+        postprocessor = Postprocessor(**postprocessor_args)
     model = model_class(
         model_path,
         device_number=device,
         preprocessor=Preprocessor(),
-        postprocessor=Postprocessor(**postprocessor_args))
+        postprocessor=postprocessor)
     SingleQuestionSample.to_nli_converter = model
     SingleQuestionSingleOptionSample.to_nli_converter = model
     logger.info(
@@ -106,7 +112,7 @@ def get_default_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--model_type',
         default='dummy',
-        choices=['dummy', 'bart', 'just_question', 'const'])
+        choices=['dummy', 'bart', 'just_question', 'const', 'concat'])
     parser.add_argument(
         '--model_path',
         required=True,
