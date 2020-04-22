@@ -11,6 +11,7 @@ from qa2nli.converters.processors import Preprocessor, Postprocessor
 from qa2nli.qa_readers.race import RaceReader
 from qa2nli.qa_readers.multirc import MultircReader
 from qa2nli.qa_readers.reader import SingleQuestionSample, Sample
+from qa2nli.qa_readers.boolq import BoolQReader
 import json
 from tqdm import tqdm
 import multiprocessing
@@ -81,6 +82,8 @@ def main(args: argparse.Namespace) -> None:
         inp_data = RaceReader().read(inp_dir)
     elif args.input_reader == 'multirc_reader':
         inp_data = MultircReader().read(inp_dir.with_suffix('.json'))
+    elif args.input_reader == 'boolq_reader':
+        inp_data = BoolQReader().read(inp_dir.with_suffix('.jsonl'))
     else:
         raise ValueError
     # check model class
@@ -111,7 +114,7 @@ def main(args: argparse.Namespace) -> None:
 
     if args.input_reader == 'race_reader':
         total_q = len(inp_data)  # race reader outputs SingleQuestionSample
-    elif args.input_reader == 'multirc_reader':
+    elif args.input_reader == 'multirc_reader' or args.input_reader == 'boolq_reader':
         total_q = len(
             inp_data)  # we won't batch for SingleQuestionSingleSample also
 

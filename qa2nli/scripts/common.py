@@ -128,7 +128,7 @@ def get_default_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--input_reader',
         default='race_reader',
-        choices=['race_reader', 'multirc_reader'])
+        choices=['race_reader', 'multirc_reader', 'boolq_reader'])
     parser.add_argument(
         '--input_data', type=Path, help='Path to input data directory')
     parser.add_argument('--set', default='dev', help='dev, train or test')
