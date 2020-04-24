@@ -122,6 +122,7 @@ def main(args: argparse.Namespace) -> None:
             inp_data)  # we won't batch for SingleQuestionSingleSample also
 
     # init process pool, giving one device assignment to each from the queue
+    logger.info(f"Number of cores available {multiprocessing.cpu_count()}")
     process_pool = multiprocessing.Pool(
         processes=args.num_processes,
         initializer=consume_device_queue_and_init,

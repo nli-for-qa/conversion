@@ -81,7 +81,7 @@ def run_inference(input_sample: Sample,
     idx = input_sample.id
     # check if exists
     file_ = output_dir / valid_filename(idx)
-
+    logger.info(f"pid {multiprocessing.current_process()} processing id {idx}")
     if ((file_).is_file()) and (not overwrite):
         logger.debug(f"Skipping {idx} as {file_} exists")
 
@@ -89,7 +89,7 @@ def run_inference(input_sample: Sample,
 
     # use the global model object
     converted: List = input_sample.to(target_type)
-
+    logger.info(f"pid {multiprocessing.current_process().pid} converted id {idx}")
     for ex in converted:
         with open(file_, 'w') as f:
             json.dump(ex.__dict__, f)
