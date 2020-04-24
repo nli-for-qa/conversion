@@ -7,7 +7,7 @@ import time
 import torch
 from torch.utils.data import DataLoader
 
-from transformers.transformer_base import BaseTransformer, add_generic_args, generic_train, get_linear_schedule_with_warmup
+from transformers.transformer_base import BaseTransformer, get_linear_schedule_with_warmup
 from .utils import SummarizationDataset
 
 logger = logging.getLogger(__name__)
