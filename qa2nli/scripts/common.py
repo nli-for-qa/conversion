@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, List, Dict
 from qa2nli.converters.processors import Preprocessor, Postprocessor, PostprocessorBase
 from qa2nli.converters.base import Converter
+from qa2nli.converters.rule.predictor import RuleBasedConverter
 import multiprocessing
 import itertools
 import argparse
@@ -21,7 +22,10 @@ def init(device: int, model_type: str, model_path: Path, model_class: Any,
     global model
     # This is a hack
 
-    if model_class == Converter:
+    if model_class in [Converter, RuleBasedConverter]:
+        logger.warning(
+            f"Ignoring post-processor args for {model_class.__class__.__name__}"
+        )
         postprocessor = PostprocessorBase()
     else:
         postprocessor = Postprocessor(**postprocessor_args)
@@ -112,7 +116,7 @@ def get_default_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--model_type',
         default='dummy',
-        choices=['dummy', 'bart', 'just_question', 'const', 'concat'])
+        choices=['dummy', 'bart', 'just_question', 'const', 'concat', 'rule'])
     parser.add_argument(
         '--model_path',
         required=True,
