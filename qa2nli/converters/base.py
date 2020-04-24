@@ -44,7 +44,6 @@ class Converter:
 
     def apply_model(self, preprocessed: List[Tuple[str, Dict]], *args: Any,
                     **kwargs: Any) -> List[Tuple[str, Dict]]:
-        # check batching
 
         return preprocessed
 

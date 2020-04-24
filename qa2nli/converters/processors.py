@@ -54,21 +54,47 @@ def remove_dots(inp: str) -> str:
     return dots.sub('.', inp)
 
 
-class LengthIssue(Enum):
+class ConversionIssue(Enum):
     NONE = 'none'
     TOO_SHORT = 'too_short'
     TOO_LONG = 'too_long'
     COULD_NOT_FIX = 'could_not_fix'
+    INVALID_QUESTION = 'invalid_question'
+    INVALID_OPTION = 'invalid_option'
+    MISSING_INFORMATION = 'missing_info'
+    UNGRAMTICAL_RESULT = 'ungramatical_result'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.value
 
 
 class PostprocessorBase:
+    def __init__(self,
+                 lower_length_ratio: Optional[float] = None,
+                 upper_length_ratio: float = 1.3) -> None:
+        self.lower_length_ratio = lower_length_ratio
+        self.upper_length_ratio = upper_length_ratio
+
     def __call__(self, inp: str, meta: Dict) -> Tuple[str, Dict]:
         meta.update({'conversion_issues': []})
 
         return inp, meta
+
+    def _length_check(self, output: str, question: str,
+                      option: str) -> ConversionIssue:
+        total_ratio = (len(output) / (len(question) + len(option)))
+
+        if total_ratio > self.upper_length_ratio:
+            # too long. Cut the output
+
+            return ConversionIssue.TOO_LONG
+        elif self.lower_length_ratio is None and len(output) < len(option):
+            return ConversionIssue.TOO_SHORT
+        elif self.lower_length_ratio is not None:
+            if total_ratio < self.lower_length_ratio:
+                return ConversionIssue.TOO_SHORT
+
+        return ConversionIssue.NONE
 
 
 class Postprocessor(PostprocessorBase):
@@ -76,7 +102,7 @@ class Postprocessor(PostprocessorBase):
                  sentence_splitter: str = 'period',
                  cleaner: str = None,
                  lower_length_ratio: float = None,
-                 upper_length_ratio: float = None) -> None:
+                 upper_length_ratio: float = 1.3) -> None:
         self.sentence_splitter = sentence_splitter
 
         if cleaner == 'remove_dots':
@@ -88,26 +114,9 @@ class Postprocessor(PostprocessorBase):
             self.spacy_nlp = get_spacy_model('en_core_web_sm')
         else:
             self.spacy_nlp = None
-        self.lower_length_ratio = lower_length_ratio
-
-        if upper_length_ratio is None:
-            self.upper_length_ratio = 1.3
-
-    def _length_check(self, output: str, question: str,
-                      option: str) -> LengthIssue:
-        total_ratio = (len(output) / (len(question) + len(option)))
-
-        if total_ratio > self.upper_length_ratio:
-            # too long. Cut the output
-
-            return LengthIssue.TOO_LONG
-        elif self.lower_length_ratio is None and len(output) < len(option):
-            return LengthIssue.TOO_SHORT
-        elif self.lower_length_ratio is not None:
-            if total_ratio < self.lower_length_ratio:
-                return LengthIssue.TOO_SHORT
-
-        return LengthIssue.NONE
+        super().__init__(
+            lower_length_ratio=lower_length_ratio,
+            upper_length_ratio=upper_length_ratio)
 
     def _fix_too_short(self, all_sentences: List[str],
                        meta: Dict) -> Tuple[str, bool]:
@@ -116,9 +125,9 @@ class Postprocessor(PostprocessorBase):
         current_output = all_sentences[0]
         # add sentences till legth is not too short
         max_tries = min(5, len(all_sentences))
-        length_issue = LengthIssue.TOO_SHORT
+        length_issue = ConversionIssue.TOO_SHORT
 
-        while length_issue == LengthIssue.TOO_SHORT:
+        while length_issue == ConversionIssue.TOO_SHORT:
             current_output = current_output + f" {all_sentences[next_]}"
             length_issue = self._length_check(current_output, meta['question'],
                                               meta['option'])
@@ -150,17 +159,17 @@ class Postprocessor(PostprocessorBase):
         length_issue = self._length_check(output, meta['question'],
                                           meta['option'])
 
-        if length_issue == LengthIssue.TOO_SHORT:
+        if length_issue == ConversionIssue.TOO_SHORT:
             issues_encountered.append(length_issue)
             output, could_not_fix = self._fix_too_short(sentences, meta)
 
             if could_not_fix:
-                issues_encountered.append(LengthIssue.COULD_NOT_FIX)
+                issues_encountered.append(ConversionIssue.COULD_NOT_FIX)
         # check again
         length_issue = self._length_check(output, meta['question'],
                                           meta['option'])
 
-        if length_issue == LengthIssue.TOO_LONG:
+        if length_issue == ConversionIssue.TOO_LONG:
             issues_encountered.append(length_issue)
             output = output[:int(
                 math.ceil(self.upper_length_ratio *

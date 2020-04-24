@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Type
 import argparse
 import logging
 from pathlib import Path
@@ -7,6 +7,7 @@ from qa2nli.scripts.common import (
     consume_device_queue_and_init, read_cache_dir)
 from qa2nli.converters.bart.predictor import BartConverter, BartLikeConst, Converter
 from qa2nli.converters.base import Converter, JustQuestionConverter
+from qa2nli.converters.rule.predictor import RuleBasedConverter
 from qa2nli.converters.processors import Preprocessor, Postprocessor
 from qa2nli.qa_readers.race import RaceReader
 from qa2nli.qa_readers.multirc import MultircReader
@@ -89,13 +90,15 @@ def main(args: argparse.Namespace) -> None:
     # check model class
 
     if args.model_type == 'bart':
-        model_class = BartConverter
+        model_class: Type[Converter] = BartConverter
     elif args.model_type == 'just_question':
         model_class = JustQuestionConverter
     elif args.model_type == 'const':
         model_class = BartLikeConst
     elif args.model_type == 'concat':
         model_class = Converter
+    elif args.model_type == 'rule':
+        model_class = RuleBasedConverter
     else:
         model_class = Converter
     logger.info(f"Model class used is {model_class}")
