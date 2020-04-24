@@ -17,6 +17,7 @@ import json
 from tqdm import tqdm
 import multiprocessing
 from functools import partial
+import random
 logger = logging.getLogger(__file__)
 LEVEL = logging.INFO
 
@@ -39,6 +40,8 @@ def get_parser() -> argparse.ArgumentParser:
         default=100,
         type=int,
         help='Chunk size for pool.imap()')
+    parser.add_argument('--shuffle', action='store_true')
+    parser.add_argument('--seed', type=int, default=123)
 
     return parser
 
@@ -138,6 +141,10 @@ def main(args: argparse.Namespace) -> None:
                 postprocess_splitter)  # postprocessor_args
         ))
     # do the inference
+    if args.shuffle:
+        random.seed(args.seed)
+        logger.info("Suffling data")
+        random.shuffle(inp_data)
     jobs = process_pool.imap_unordered(
         infer, inp_data, chunksize=args.per_process_chunk_size)
 

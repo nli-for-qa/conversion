@@ -81,7 +81,7 @@ def run_inference(input_sample: Sample,
     idx = input_sample.id
     # check if exists
     file_ = output_dir / valid_filename(idx)
-    logger.info(f"pid {multiprocessing.current_process()} processing id {idx}")
+    logger.info(f"pid {multiprocessing.current_process().pid} processing id {idx}")
     if ((file_).is_file()) and (not overwrite):
         logger.debug(f"Skipping {idx} as {file_} exists")
 
