@@ -63,6 +63,7 @@ class ConversionIssue(Enum):
     INVALID_OPTION = 'invalid_option'
     MISSING_INFORMATION = 'missing_info'
     UNGRAMTICAL_RESULT = 'ungramatical_result'
+    UNKNOWN = 'unknown'
 
     def __str__(self) -> str:
         return self.value
@@ -126,8 +127,10 @@ class Postprocessor(PostprocessorBase):
         # add sentences till legth is not too short
         max_tries = min(5, len(all_sentences))
         length_issue = LengthIssue.TOO_SHORT
+
         if max_tries == 1:
-           could_not_fix = True
+            could_not_fix = True
+
         while length_issue == LengthIssue.TOO_SHORT:
 
             current_output = current_output + f" {all_sentences[next_]}"

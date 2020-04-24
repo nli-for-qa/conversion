@@ -32,12 +32,24 @@ class RuleBasedPreprocessor(PreprocessorBase):
             warnings.simplefilter("ignore")
             q_doc = self.nlp(q)
             o_doc = self.nlp(o)
-        q_conll_dict = parse(q_doc._.conll_str)[0].tokens
-        o_conll_dict = parse(o_doc._.conll_str)[0].tokens
+        try:
+            q_conll_dict = parse(q_doc._.conll_str)[0].tokens
+            o_conll_dict = parse(o_doc._.conll_str)[0].tokens
+        except IndexError:
+            logger.error(f"Index error on parse for {q}")
+            h = q + ' ' + o
+            meta: Dict[str, Any] = {
+                'question': q,
+                'option': o,
+                'conversion_issues': str(ConversionIssue.UNKNOWN)
+            }
+
+            return h, meta
+
         rule_q = Question(deepcopy(q_conll_dict))  # type:ignore
         rule_o = AnswerSpan(deepcopy(o_conll_dict))  # type:ignore
         conversion_issues = []
-        meta: Dict[str, Any] = {'question': q, 'option': o}
+        meta = {'question': q, 'option': o}
 
         if not rule_q.isvalid:
             conversion_issues.append(ConversionIssue.INVALID_QUESTION)
