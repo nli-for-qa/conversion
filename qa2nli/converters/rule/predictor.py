@@ -41,7 +41,7 @@ class RuleBasedPreprocessor(PreprocessorBase):
             meta: Dict[str, Any] = {
                 'question': q,
                 'option': o,
-                'conversion_issues': str(ConversionIssue.UNKNOWN)
+                'conversion_issues': [str(ConversionIssue.UNKNOWN)]
             }
 
             return h, meta
@@ -65,6 +65,10 @@ class RuleBasedPreprocessor(PreprocessorBase):
             h = self.detokenizer.detokenize(
                 rule_q.format_declr(), return_str=True)
         meta['conversion_issues'] = [str(issue) for issue in conversion_issues]
+
+        if meta['conversion_issues']:
+            logger.debug(
+                f"Issues {conversion_issues} encountered for {q} + {o}")
 
         return h, meta
 

@@ -77,7 +77,8 @@ class PostprocessorBase:
         self.upper_length_ratio = upper_length_ratio
 
     def __call__(self, inp: str, meta: Dict) -> Tuple[str, Dict]:
-        meta.update({'conversion_issues': []})
+        # if the list does not exists add an empty
+        meta['conversion_issues'] = meta.get('conversion_issues', [])
 
         return inp, meta
 
@@ -126,12 +127,12 @@ class Postprocessor(PostprocessorBase):
         current_output = all_sentences[0]
         # add sentences till legth is not too short
         max_tries = min(5, len(all_sentences))
-        length_issue = LengthIssue.TOO_SHORT
+        length_issue = ConversionIssue.TOO_SHORT
 
         if max_tries == 1:
             could_not_fix = True
 
-        while length_issue == LengthIssue.TOO_SHORT:
+        while length_issue == ConversionIssue.TOO_SHORT:
 
             current_output = current_output + f" {all_sentences[next_]}"
             length_issue = self._length_check(current_output, meta['question'],
