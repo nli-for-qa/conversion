@@ -117,14 +117,15 @@ class Postprocessor(PostprocessorBase):
         # add sentences till legth is not too short
         max_tries = min(5, len(all_sentences))
         length_issue = LengthIssue.TOO_SHORT
-
+        if max_tries == 1:
+           could_not_fix = True
         while length_issue == LengthIssue.TOO_SHORT:
             current_output = current_output + f" {all_sentences[next_]}"
             length_issue = self._length_check(current_output, meta['question'],
                                               meta['option'])
             next_ += 1
 
-            if next_ > max_tries:
+            if next_ >= max_tries:
                 could_not_fix = True
 
                 break
