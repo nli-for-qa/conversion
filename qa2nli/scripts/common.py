@@ -81,7 +81,9 @@ def run_inference(input_sample: Sample,
     idx = input_sample.id
     # check if exists
     file_ = output_dir / valid_filename(idx)
-    logger.info(f"pid {multiprocessing.current_process().pid} processing id {idx}")
+    logger.info(
+        f"pid {multiprocessing.current_process().pid} processing id {idx}")
+
     if ((file_).is_file()) and (not overwrite):
         logger.debug(f"Skipping {idx} as {file_} exists")
 
@@ -89,7 +91,9 @@ def run_inference(input_sample: Sample,
 
     # use the global model object
     converted: List = input_sample.to(target_type)
-    logger.info(f"pid {multiprocessing.current_process().pid} converted id {idx}")
+    logger.info(
+        f"pid {multiprocessing.current_process().pid} converted id {idx}")
+
     for ex in converted:
         with open(file_, 'w') as f:
             json.dump(ex.__dict__, f)
@@ -132,7 +136,9 @@ def get_default_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--input_reader',
         default='race_reader',
-        choices=['race_reader', 'multirc_reader', 'boolq_reader'])
+        choices=[
+            'dream_reader', 'race_reader', 'multirc_reader', 'boolq_reader'
+        ])
     parser.add_argument(
         '--input_data', type=Path, help='Path to input data directory')
     parser.add_argument('--set', default='dev', help='dev, train or test')
