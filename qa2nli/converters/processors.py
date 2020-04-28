@@ -132,7 +132,8 @@ class Postprocessor(PostprocessorBase):
         if max_tries == 1:
             could_not_fix = True
 
-        while length_issue == ConversionIssue.TOO_SHORT:
+        while length_issue == ConversionIssue.TOO_SHORT and (
+                not could_not_fix):
 
             current_output = current_output + f" {all_sentences[next_]}"
             length_issue = self._length_check(current_output, meta['question'],
