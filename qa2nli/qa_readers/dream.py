@@ -57,6 +57,7 @@ class DreamReader(DatasetReader):
             raise ValueError(f"{input_type} unsupported")
         self.input_type = input_type
         self.output_type = output_type
+        self.fitb_pattern = re.compile(r'_+')
 
     def _read_data(self, path: Path) -> Dict:
         with open(path) as f:
@@ -86,6 +87,11 @@ class DreamReader(DatasetReader):
                 # Do some preprocessing here
                 # combine the dialogue sentences
                 x['passage'] = ' '.join(x['passage'])
+                # fix fitb format
+
+                for q_n, q in enumerate(x['questions']):
+                    x['questions'][q_n]['question'] = self.fitb_pattern.sub(
+                        '_', x['questions'][q_n]['question'])
 
                 # number the answer
 
