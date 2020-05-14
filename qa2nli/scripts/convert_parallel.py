@@ -11,6 +11,7 @@ from qa2nli.converters.rule.predictor import RuleBasedConverter
 from qa2nli.converters.processors import Preprocessor, Postprocessor
 from qa2nli.qa_readers.race import RaceReader
 from qa2nli.qa_readers.multirc import MultircReader
+from qa2nli.qa_readers.cosmosqa import CosmosqaReader
 from qa2nli.qa_readers.dream import DreamReader
 from qa2nli.qa_readers.reclor import ReclorReader
 from qa2nli.qa_readers.reader import SingleQuestionSample, Sample
@@ -94,6 +95,8 @@ def main(args: argparse.Namespace) -> None:
         inp_data = DreamReader().read(inp_dir.with_suffix('.json'))
     elif args.input_reader == 'reclor_reader':
         inp_data = ReclorReader().read(inp_dir.with_suffix('.json'))
+    elif args.input_reader == 'cosmosqa_reader':
+        inp_data = CosmosqaReader().read(inp_dir.with_suffix('.json'))
     else:
         raise ValueError
     # check model class
