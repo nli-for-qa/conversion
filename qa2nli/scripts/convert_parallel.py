@@ -127,7 +127,9 @@ def main(args: argparse.Namespace) -> None:
         overwrite=(not args.resume_from_cache))
     total_q = None
 
-    if args.input_reader in ['race_reader', 'dream_reader', 'reclor_reader']:
+    if args.input_reader in [
+            'race_reader', 'dream_reader', 'reclor_reader', 'cosmosqa_reader'
+    ]:
         total_q = len(inp_data)  # race reader outputs SingleQuestionSample
     elif args.input_reader == 'multirc_reader' or args.input_reader == 'boolq_reader':
         total_q = len(
