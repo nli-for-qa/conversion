@@ -25,8 +25,20 @@ class RuleBasedPreprocessor(PreprocessorBase):
         conllformatter = ConllFormatter(self.nlp)
         self.nlp.add_pipe(conllformatter, last=True)
         self.detokenizer = MosesDetokenizer()
+        self.vanila_preprocessor = PreprocessorBase()
 
     def __call__(self, q: str, o: str) -> Tuple[str, Dict]:
+        if '_' in q:  # FITB. Do it and return early
+            h, meta = self.vanila_preprocessor(q, o)
+
+        return h, meta
+
+        if o in q:
+            # most likely a preprocessed FITB question
+            meta = {'question': q, 'option': o}
+
+            return q, meta
+
         # the old code throws UserWarnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
