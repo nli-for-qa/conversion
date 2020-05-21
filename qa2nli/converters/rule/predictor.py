@@ -31,7 +31,7 @@ class RuleBasedPreprocessor(PreprocessorBase):
         if '_' in q:  # FITB. Do it and return early
             h, meta = self.vanila_preprocessor(q, o)
 
-        return h, meta
+            return h, meta
 
         if o in q:
             # most likely a preprocessed FITB question
